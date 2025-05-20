@@ -1,5 +1,6 @@
 #  Kopia Kanban web app
 Projekt zrealizowany z współpracą z firmą Bilenium
+
 oryginalny projekt: https://github.com/wilduk/Projekt
 ## Członkowie projektu
 - Nikodem Banach - kierownik, Backend, bazy danych, dokumentacja
