@@ -1,5 +1,5 @@
 #  Kopia Kanban web app
-orginalny projekt: https://github.com/wilduk/Projekt
+oryginalny projekt: https://github.com/wilduk/Projekt
 ## Członkowie projektu
 - Nikodem Banach - kierownik, Backend, bazy danych, dokumentacja
 - Łukasz Łuckiewicz - Backend, Frontend, dokumentacja
