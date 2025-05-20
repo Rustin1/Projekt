@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Board</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'style.css' %}">
+</head>
+<body>
+
+<div class="columns-container" id="columns-container">
+</div>
+
+<!-- Formularz dodawania kolumny -->
+<form id="add-column-form">
+    <input type="text" id="name" name="name" placeholder="Nazwa kolumny">
+    <input type="number" id="max" name="max" placeholder="Maksymalna ilość">
+    <input type="number" id="position" name="position" placeholder="Pozycja kolumny">
+    <button type="button" onclick="addColumn()">Dodaj kolumnę</button>
+</form>
+
+<!-- Formularz edycji kolumny -->
+<form id="edit-column-form" style="display: none;">
+    <input type="hidden" id="edit-column-id" name="id">
+    <input type="text" id="edit-column-name" name="name" placeholder="Nazwa kolumny">
+    <input type="number" id="edit-column-max" name="max" placeholder="Maksymalna ilość">
+    <button type="button" onclick="saveColumnChanges()">Zapisz zmiany</button>
+    <button type="button" onclick="cancelColumnEdit()" id="cancel-column-edit">Anuluj</button>
+</form>
+
+<!-- Formularz edycji notatki -->
+<form id="edit-note-form" style="display: none;">
+    <input type="hidden" id="edit-note-id" name="id">
+    <input type="text" id="edit-note-name" name="name" placeholder="Nazwa kolumny">
+    <input type="number" id="edit-note-position" name="position" placeholder="Pozycja kolumny">
+    <button type="button" onclick="editNote()">Zapisz zmiany</button>
+    <button type="button" id="cancel-note-edit">Anuluj</button>
+</form>
+
+
+<script>
+
+    function getChildPosition(childId) {
+        var parent = document.getElementById('columns-container');
+        var children = parent.children;
+
+        for (var i = 0; i < children.length; i++) {
+            if (children[i].id === childId) {
+                return i; // Return the index of the child
+            }
+        }
+
+        return -1; // Return -1 if child not found
+    }
+
+    function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+    function editNote(note) {
+        var noteDiv = document.getElementById("note-"+note.id);
+        var textbox = document.createElement("input");
+        textbox.type = "text";
+        textbox.textContent = note.name;
+        textbox.id = "note-"+note.id+"-textbox";
+        noteDiv.textContent = "";
+        noteDiv.appendChild(textbox);
+        giveNoteButton(note, "✅", acceptNoteChanges);
+        giveNoteButton(note, "❌", cancelNoteChanges);
+    }
+
+    function giveNoteButton(note, name, func){
+        var noteDiv = document.getElementById("note-"+note.id);
+        var button = document.createElement("button");
+        button.textContent = name;
+        button.onclick = function () { func(note);};
+        button.tagName = "note-"+note.id+"-button";
+        noteDiv.appendChild(button)
+    }
+
+    function moveNote(note,pos){
+
+        var noteDiv = document.getElementById("note-"+note.id);
+
+        var parent = document.getElementById('columns-container');
+        var children = parent.children;
+
+        if(children.length >= pos && pos >= 0){
+            console.log("heheszki");
+            var container = children[pos-1];
+            var div = document.querySelector("div#"+container.id+" > div");
+            div.appendChild(noteDiv);
+        }
+        const json = JSON.stringify({id: note.id, column: pos});
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/notes/', {method: 'PUT', headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+        }, body: json})
+            .then(response => response.json())
+            .catch(error => console.error(error));
+    }
+
+    function movePrev(note){
+        var div = document.getElementById('column-'+note.column+'-container');
+        var num = getChildPosition(div.id);
+        console.log(num);
+        note.column = note.column-1;
+        moveNote(note,num);
+    }
+
+    function moveNext(note){
+        var div = document.getElementById('column-'+note.column+'-container');
+        var num = getChildPosition(div.id)+2;
+        console.log(num);
+        note.column = note.column+1;
+        moveNote(note,num);
+    }
+
+    function giveDefaultButtons(note){
+        giveNoteButton(note, "E", editNote);
+        giveNoteButton(note, "🗑", deleteNote);
+        giveNoteButton(note, "<", movePrev);
+        giveNoteButton(note, ">", moveNext);
+    }
+
+    function addNote(coluId, note){
+            name = note.name
+            if(name==null){
+                var name = document.getElementById('name-'+coluId).value; // gdy pobiera nazwe z bazy to jest pomijane
+            }
+            //var name = document.getElementById('name-'+coluId).value; // zobacz
+            //var id = form.querySelector('column').value;
+            var noteDiv = document.createElement("div");
+            noteDiv.classList.add("note");
+            noteDiv.textContent = name;
+            noteDiv.id = "note-" + note.id;
+            document.getElementById("column-"+coluId).appendChild(noteDiv);
+            giveDefaultButtons(note);
+            var columnId = parseInt(coluId)
+
+        }
+
+        function createNote(coluId, name) {
+
+            //const name = document.getElementById('name').value;
+            const json = JSON.stringify({id: coluId, name: name});
+            const csrftoken = getCookie('csrftoken');
+            fetch('/api/notes/', {method: 'POST', headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+            }, body: json})
+                .then(response => response.json())
+                .then(data => {
+                    if(!data['error']){
+                        addNote(coluId,data);
+                    }
+                })
+                .catch(error => console.error(error));
+        }
+
+        function deleteNote(note) {
+        var noteDiv = document.getElementById("note-"+note.id);
+        var colDiv = document.getElementById("column-"+note.column);
+        colDiv.removeChild(noteDiv)
+        const json = JSON.stringify({id: note.id});
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/notes/', {method: 'DELETE', headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+        }, body: json});
+    }
+
+    function acceptNoteChanges(note) {
+        var noteDiv = document.getElementById("note-"+note.id);
+        var noteText = document.getElementById("note-"+note.id+"-textbox");
+        const json = JSON.stringify({id: note.id, name: noteText.value, position: note.position});
+        noteDiv.textContent = "updating...";
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/notes/', {method: 'PUT', headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+        }, body: json})
+            .then(response => response.json())
+            .then(data => noteDiv.textContent = data.name)
+            .then(idk => giveDefaultButtons(data))
+            .catch(error => console.error(error));
+    }
+
+    function cancelNoteChanges(note){
+        var noteDiv = document.getElementById("note-"+note.id);
+        noteDiv.textContent = note.name;
+        giveDefaultButtons(note);
+    }
+
+
+        async function getNotes(id) {
+            const csrftoken = getCookie('csrftoken');
+            const data = await fetch('/api/notes/?id='+id, {method: 'GET', headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+            }})
+                .then(response => response.json())
+                .catch(error => console.error(error));
+                data.forEach(function(note) {
+                addNote(id,note);
+            })
+        }
+
+    function deleteColumn(column) {
+        var columnsList = document.getElementById("columns-container");
+        var columnDiv = document.getElementById("column-"+column+"-container");
+        columnsList.removeChild(columnDiv);
+        const json = JSON.stringify({id: column});
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/columns/', {method: 'DELETE', headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+        }, body: json});
+    }
+
+    function addColumnDiv(coluId, name, max, position) {
+
+        var maxstr = ""
+        if(max != "None" && max != null){
+            maxstr = "Max: "+ max
+        }
+        var container = document.getElementById("columns-container");
+        var coluDiv = document.createElement("div");
+        coluDiv.classList.add("column");
+        coluDiv.id = "column-"+coluId+'-container';
+        coluDiv.innerHTML = ' \
+            <h2 id = "title-'+coluId+'">'+name+'</h2> \
+            <p id = "max-'+coluId+'">'+maxstr+'</p> \
+            <div id="column-'+coluId+'"></div> \
+            <button onclick="editColumn(\''+coluId+'\', \''+name+'\', \''+max+'\')">Edytuj kolumnę</button> \
+            <button onclick="deleteColumn(\''+coluId+'\')">Usuń kolumnę</button> \
+            <form id="add-note-form"> \
+                <input type="text" id="name-'+coluId+'" name="name" placeholder="Treść notatki"> \
+                <!--<input type="number" id="column" name="column" placeholder="Kolumna">--> \
+                <button type="button" onclick="createNote('+coluId+')">Dodaj notatke</button> \
+            </form>\
+            ';
+        container.insertBefore(coluDiv, container.childNodes[position]);
+        document.addEventListener("DOMContentLoaded", function() { getNotes(coluId);
+        })
+    }
+
+            // Funkcja do dodawania nowej kolumny
+    function addColumn() {
+        const name = document.getElementById('name').value;
+        const max = parseInt(document.getElementById('max').value);
+        const position = parseInt(document.getElementById('position').value);
+        const json = JSON.stringify({name: name, max: max, position: position});
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/columns/', {method: 'POST', headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+        }, body: json})
+            .then(response => response.json())
+            .then(data => addColumnDiv(data.id, data.name, data.max, data.position))
+            .catch(error => console.error(error));
+    }
+
+    function updateColumn(column){
+        var columnName = document.getElementById("title-"+column.id);
+        columnName.textContent = column.name;
+        var columnMax = document.getElementById("max-"+column.id);
+        var max = column.max;
+        if(max == null){
+            columnMax.textContent = "";
+        }
+        else{
+            columnMax.textContent = "Max: "+column.max;
+        }
+    }
+
+    function saveColumnChanges() {
+        const id = document.getElementById('edit-column-id').value;
+        const name = document.getElementById('edit-column-name').value;
+        const max = parseInt(document.getElementById('edit-column-max').value);
+        //const position = parseInt(document.getElementById('edit-column-position').value);
+        const json = JSON.stringify({id: id, name: name, max: max});
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/columns/', {method: 'PUT', headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+        }, body: json})
+            .then(response => response.json())
+            .then(data => updateColumn(data))
+            .catch(error => console.error(error));
+    }
+
+    function editColumn(columnId, columnName, columnMax) {
+        document.getElementById('edit-column-form').style.display = 'block';
+        document.getElementById('add-column-form').style.display = 'none';
+        document.getElementById('edit-column-form').elements.id.value = columnId;
+        document.getElementById('edit-column-form').elements.name.value = columnName;
+        document.getElementById('edit-column-form').elements.max.value = columnMax;
+    }
+
+    function cancelColumnEdit() {
+        document.getElementById('edit-column-form').style.display = 'none';
+        document.getElementById('add-column-form').style.display = 'block';
+    }
+
+    {% for column in data %}addColumnDiv("{{ column.id }}", "{{ column.name }}", "{{ column.max }}");  {% endfor %}
+
+</script>
+
+</body>
+</html>

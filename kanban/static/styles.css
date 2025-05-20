@@ -1,0 +1,301 @@
+/* ---- RESET/BASIC STYLING ---- */
+* {
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+    font-family: sans-serif;
+}
+
+*::-webkit-scrollbar {
+    /*display: none;*/
+}
+
+body {
+    background-image: url(https://static.vecteezy.com/system/resources/previews/005/585/911/original/abstract-dark-purple-background-overlap-layer-on-dark-space-for-background-design-exclusive-wallpaper-design-for-poster-brochure-presentation-website-etc-vector.jpg);
+    background-position: center;
+    background-size: cover;
+}
+
+.board {
+    width: 100%;
+    height: 100vh;
+    overflow: auto;
+    padding-top: 8px;
+
+    background-image: url(https://static.vecteezy.com/system/resources/previews/005/585/911/original/abstract-dark-purple-background-overlap-layer-on-dark-space-for-background-design-exclusive-wallpaper-design-for-poster-brochure-presentation-website-etc-vector.jpg);
+    background-position: center;
+    background-size: cover;
+}
+
+/* ---- FORM ---- */
+.note-form {
+    /* padding: 32px 0px 0; */
+    padding: 16px 0;
+    margin: -8px;
+}
+
+input {
+    padding: 12px;
+    margin-right: 12px;
+    width: 150px;
+
+    border-radius: 4px;
+    border: none;
+
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    background: white;
+
+    font-size: 14px;
+    outline: none;
+}
+
+.note-form button {
+    padding: 12px 5px;
+
+    border-radius: 4px;
+    border: none;
+
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    background: #ffffff;
+    color: black;
+
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* ---- BOARD ---- */
+.lanes {
+    display: grid;
+    align-items: stretch;
+    justify-content: start;
+    gap: 16px;
+
+    padding: 24px 32px;
+    padding-top: 8px;
+    padding-bottom: 0;
+}
+
+.left-title-text {
+    background: #f4f4f4;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    border-radius: 4px;
+    width: 40px;
+    writing-mode: vertical-lr;
+    transform: rotate(180deg);
+    font-size: 22px;
+    font-weight: bold;
+    padding: 12px 6px;
+    text-align: center;
+    margin-top: 5px;
+}
+
+.left-title-text.left-title-number {
+    writing-mode: lr;
+    transform: none;
+    padding: 6px 0;
+    margin-top: 0;
+}
+
+.heading {
+    font-size: 22px;
+    font-weight: bold;
+    margin-bottom: 8px;
+    display: flex;
+    width: 100%;
+    justify-content: space-between;
+}
+
+.heading div {
+     min-width: 20px;
+}
+
+.nazwa {
+    flex: 1;
+}
+
+.nazwa input[type=text]{
+    width: 125px;
+}
+
+.licznik {
+    text-align: right;
+}
+.licznik input{
+    width: 40px;
+    height: 40px;
+    margin: 0;
+}
+.heading input[type=checkbox]{
+    width: 20px;
+    height: 20px;
+    margin: 10px 0 0;
+}
+
+.note-input {
+    width: 100%;
+    margin-bottom: 12px;
+}
+
+.alert {
+    color: #e85e5e;
+}
+
+.swim-lane {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    background: #f4f4f4;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+
+    padding: 12px;
+    border-radius: 4px;
+    width: 225px;
+    min-height: 120px;
+
+    flex-shrink: 0;
+}
+
+.task {
+    background: white;
+    color: black;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.15);
+
+    padding: 12px;
+    border-radius: 4px;
+
+    font-size: 16px;
+    cursor: move;
+}
+
+.is-dragging {
+    scale: 1.05;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    background: rgb(50, 50, 50);
+    color: white;
+}
+
+.przyciski {
+    display: flex;
+    justify-content: space-around;
+}
+
+.edit, .delete {
+    padding: 5px 10px;
+
+
+    border-radius: 4px;
+    border: none;
+
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    background: #ffffff;
+    color: black;
+
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.delete {
+    background-color: #e85e5e;
+}
+
+.accept {
+    background-color: #cce19f;
+}
+
+.new-column-wrapper {
+    display: flex;
+    align-items: center;
+}
+
+.circle {
+    width: 50px;
+    min-width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    position: relative;
+    background-image: url(https://upload.wikimedia.org/wikipedia/commons/thumb/6/6a/Unicode_0x002B.svg/640px-Unicode_0x002B.svg.png);
+    background-color: #dddddd;
+    background-size: cover; /* Ensures the image covers the entire circle */
+    background-position: center; /* Centers the image within the circle */
+    cursor: pointer;
+}
+
+.task button {
+    padding: 0px 10px;
+
+    float: right;
+
+    border-radius: 4px;
+    border: none;
+
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    color: black;
+
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
+    height: 20px;
+}
+
+.task .usuwanie {
+    background: #e85e5e;
+}
+
+.task .edytowanie {
+    background: #ffffff;
+    margin-right: 5px;
+}
+
+
+.paddington {
+    padding: 10px;
+
+    border: none;
+    background-color: #ffffff;
+    border-radius: 4px;
+    font-weight: bold;
+    box-shadow: 0px 5px 15px rgba(0, 0, 0, 0.25);
+    color: black;
+    cursor: pointer;
+}
+button:disabled {
+    background-color: #acacac;
+    cursor: not-allowed;
+}
+
+.egzorcysta {
+  line-height: 2;
+  padding-top: 10px;
+  padding-bottom: 10px ;
+}
+
+.person-image {
+    padding-right: 2px;
+    border-radius: 50%;
+    width: 25px;
+}
+.person-list {
+    text-align: center;
+    font-size: 80%;
+    list-style-type: none;
+}
+
+.person-list ul{
+    display: flex;
+    align-items: center;
+}
+.person-list input {
+    float: left;
+    margin: 0px;
+    padding-right: 2px;
+    width: 20px;
+    height: 20px;
+}
+
+.person-list img {
+    float: right;
+
+}

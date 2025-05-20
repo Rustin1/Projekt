@@ -1,0 +1,82 @@
+        body {
+            overflow-x: auto;
+        }
+
+        .columns-container {
+            white-space: nowrap;
+        }
+
+        .column {
+            display: inline-block;
+            vertical-align: top;
+            height: 100%;
+            width: 300px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 5px;
+            color: #fff;
+
+        }
+        .note {
+            background-color: rgba(255, 255, 255, 0.30);
+            border: 3px solid black;
+            padding: 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+            text-align: center;
+            color: #fff;
+            font-size:20px;
+        }
+
+        body {
+            background-image: url("https://static.vecteezy.com/system/resources/previews/005/585/911/original/abstract-dark-purple-background-overlap-layer-on-dark-space-for-background-design-exclusive-wallpaper-design-for-poster-brochure-presentation-website-etc-vector.jpg");
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            color: black;
+            height: 100%;
+        }
+        h1 {
+
+                font-size: 50px;
+                text-align: center;
+	            color: #fff;
+	            background-color: rgba(255, 255, 255, 0.30);
+                padding: 10px;
+        }
+        h2 {
+                font-size: 40px;
+                font-family: 'Times New Roman';
+                text-align: center;
+	            color: #fff;
+	            background-color: rgba(255, 255, 255, 0.1);
+
+        }
+        h3 {
+                font-size: 35px;
+                text-align: center;
+	            color: #fff;
+	            background-color: rgba(0, 0, 0, 0.05);
+
+
+        }
+        button
+         {
+                text-align: center;
+	            color: #fff;
+	            background-color: rgba(255, 255, 255, 0.60);
+	            padding: 5px;
+                font-size:17px;
+
+        }
+        .delete
+         {
+                text-align: center;
+	            color: #fff;
+	            background-color: rgba(255, 0, 0, 0.60);
+	            padding: 5px;
+                font-size:17px;
+
+        }

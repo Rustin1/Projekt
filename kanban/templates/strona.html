@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Kanban</title>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'styles.css' %}">
+</head>
+<body>
+<div class="board">
+    <div class="lanes" id="lanes">
+        {% for column in columns %}
+            <div class="swim-lane" id="{{ column.id }}-lane" data-colid="{{ column.id }}" data-editing="0" data-ogname="{{ column.name }}">
+                <div class="heading">
+                    <div class="nazwa">
+                        <h4>{{ column.name }}</h4>
+                    </div>
+                    <div class="licznik" data-max="{{ column.max }}">liczenie</div>
+                </div>
+                <div class="przyciski">
+                    <button type="button" class="move-left paddington" onclick="moveColumnLeft('{{ column.id }}-lane')">◀</button>
+                    <button type="submit" name="edit" class="edit" onclick="edytujKolumne('{{ column.id }}')">Edytuj
+                    </button>
+                    <button type="button" name="delete" class="delete" onclick="usunKolumne('{{ column.id }}')">Usuń
+                    </button>
+                    <button type="button" class="move-right paddington" onclick="moveColumnRight('{{ column.id }}-lane')">▶
+                    </button>
+                </div>
+                <!-- Existing tasks -->
+                {% for note in notes %}
+                    {% if note.column == column.id %}
+                        <div class="task egzorcysta" draggable="true" id="{{ note.id }}-note"
+                             data-noteid="{{ note.id }}" data-ogname="{{ note.name }}"
+                             data-personid="{{ note.person }}">{{ note.name }}
+                            <div class="przyciski">
+                                <button class="edytowanie" onclick="edytujTaska('{{ note.id }}-note')">Edytuj</button>
+                                <button class="usuwanie" onclick="usunTaska('{{ note.id }}-note')">Usuń</button>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+                <form id="{{ column.id }}-form" class="note-form">
+                    <input type="text" placeholder="Nowe zadanie..." id="{{ column.id }}-input"/>
+                    <button type="submit" style="float: right;">Dodaj</button>
+                </form>
+            </div>
+        {% endfor %}
+        <button type="submit" class="circle" id="add" onclick="dodajKolumne()"></button>
+        <!-- Other swim-lanes -->
+    </div>
+</div>
+
+<script>
+    // JavaScript functions for moving columns
+    function moveColumnLeft(columnId) {
+        const column = document.getElementById(columnId);
+        const prevColumn = column.previousElementSibling;
+        const dzieci = column.parentElement.children;
+        let position;
+
+        for (let i = 0; i < dzieci.length; i++) {
+            if(dzieci[i] === prevColumn){
+                position = i;
+                break;
+            }
+        }
+
+        if (prevColumn) {
+            column.parentNode.insertBefore(column, prevColumn);
+
+            const json = JSON.stringify({
+                    id: parseInt(column.dataset.colid), // Assuming 'todo-lane' is the ID of the column
+                    position: position+1
+            })
+
+            const csrftoken = getCookie('csrftoken');
+            fetch('/api/columns/', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: json
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => console.error(error));
+        }
+    }
+
+    function moveColumnRight(columnId) {
+        const column = document.getElementById(columnId);
+        const nextColumn = column.nextElementSibling;
+        const dzieci = column.parentElement.children;
+
+        let position;
+
+        for (let i = 0; i < dzieci.length; i++) {
+            if(dzieci[i] === nextColumn){
+                position = i;
+                break;
+            }
+        }
+
+        if (nextColumn && nextColumn.id !== "add") {
+            column.parentNode.insertBefore(nextColumn, column);
+
+            const json = JSON.stringify({
+                    id: parseInt(column.dataset.colid), // Assuming 'todo-lane' is the ID of the column
+                    position: position+1
+            })
+
+            const csrftoken = getCookie('csrftoken');
+            fetch('/api/columns/', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: json
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .catch(error => console.error(error));
+        }
+    }
+
+    const form = document.getElementById("todo-form");
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    async function handleSubmit(e) {
+        e.preventDefault();
+        const formElement = e.target;
+        const input = formElement.querySelector('input');
+        const value = input.value;
+        const todoLane = formElement.parentElement;
+
+        if (!value) return;
+
+        try {
+            // Send POST request to create a new task
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch("/api/notes/", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    id: parseInt(todoLane.dataset.colid), // Assuming 'todo-lane' is the ID of the column
+                    name: value
+                })
+            });
+
+            if (!response.ok) {
+                window.alert("Limit zadań dla tej kolumny osiągnął max");
+                throw new Error("Failed to add task");
+            }
+
+            // Assuming the response returns the added task data
+            const taskData = await response.json();
+
+            // Create new task element
+            const newTask = document.createElement("div");
+            newTask.classList.add("task");
+            newTask.classList.add("egzorcysta");
+            newTask.setAttribute("draggable", "true");
+            newTask.id = taskData.id + "-note";
+            newTask.innerText = taskData.name;
+            newTask.dataset.noteid = taskData.id;
+            newTask.dataset.ogname = taskData.name;
+
+            {#<p class="task" draggable="true" data-noteid="{{ note.id }}">{{ note.name }}</p>#}
+
+            newTask.addEventListener("dragstart", () => {
+                dragstart(newTask);
+            });
+
+            newTask.addEventListener("dragend", () => {
+                dragend(newTask);
+            });
+
+            // Append the new task to the todo lane
+            const form = document.getElementById(todoLane.id.slice(0, -5) + "-form");
+            todoLane.insertBefore(newTask, form);
+            zlicz(todoLane);
+
+            giveDefaultButtons(newTask);
+
+            // Clear input field
+            input.value = "";
+        } catch (error) {
+            console.error("Error:", error.message);
+        }
+    }
+
+    const draggables = document.querySelectorAll(".task");
+    const droppables = document.querySelectorAll(".swim-lane");
+
+    let stary;
+    let starapoz;
+
+    function dragstart(task) {
+        stary = task.parentElement;
+        starapoz = 0;
+        for (let child of stary.children) {
+            if (child == task) {
+                break;
+            } else {
+                starapoz += 1;
+            }
+        }
+        task.classList.add("is-dragging");
+    }
+
+    async function dragend(task) {
+        task.classList.remove("is-dragging");
+        task.dataset.zoneid = task.closest(".swim-lane").getAttribute("id");
+        const zoneId = task.dataset.zoneid; // Pobierz identyfikator strefy
+        const zone = document.getElementById(zoneId);
+        var pos = null;
+
+
+        var i = -1;
+        for (const element of zone.children) {
+            if (element == task) {
+                pos = i;
+            }
+            i += 1;
+        }
+
+        let push = false
+
+        zlicz(stary);
+        zlicz(zone);
+        const licznik = zone.getElementsByClassName("heading")[0].getElementsByClassName("licznik")[0]
+        if (licznik.dataset.max < zone.children.length - 3) {
+            for (let j = 0; j < starapoz; j++) {
+                stary.insertBefore(task, stary.children[starapoz]);
+                zlicz(stary);
+                zlicz(zone);
+                if(push === false){
+                    push = true;
+                    window.alert("Limit zadań dla tej kolumny osiągnął max");
+                }
+            }
+        } else {
+
+            var json;
+            if (pos) {
+                json = JSON.stringify({
+                    id: parseInt(task.dataset.noteid), // Assuming 'todo-lane' is the ID of the column
+                    column: parseInt(zone.dataset.colid),
+                    position: pos
+                })
+            } else {
+                json = JSON.stringify({
+                    id: parseInt(task.dataset.noteid), // Assuming 'todo-lane' is the ID of the column
+                    column: parseInt(zone.dataset.colid)
+                })
+            }
+
+            const csrftoken = getCookie('csrftoken');
+            const response = await fetch("/api/notes/", {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    'X-CSRFToken': csrftoken
+                },
+                body: json
+            });
+        }
+    }
+
+    draggables.forEach((task) => {
+        task.addEventListener("dragstart", () => {
+            dragstart(task);
+        });
+        task.addEventListener("dragend", async () => {
+            dragend(task);
+        });
+    });
+
+    function droppableFunc(zone) {
+        zone.addEventListener("dragover", async (e) => {
+            e.preventDefault();
+
+            const bottomTask = insertAboveTask(zone, e.clientY);
+            const curTask = document.querySelector(".is-dragging");
+
+            if (!bottomTask) {
+                const form = document.getElementById(zone.id.slice(0, -5) + "-form");
+                zone.insertBefore(curTask, form);
+            } else {
+                zone.insertBefore(curTask, bottomTask);
+            }
+        });
+    }
+
+    droppables.forEach((zone) => {
+        droppableFunc(zone);
+    });
+
+    const insertAboveTask = (zone, mouseY) => {
+        const els = zone.querySelectorAll(".task:not(.is-dragging)");
+
+        let closestTask = null;
+        let closestOffset = Number.NEGATIVE_INFINITY;
+
+        els.forEach((task) => {
+            const {top} = task.getBoundingClientRect();
+
+            const offset = mouseY - top;
+
+            if (offset < 0 && offset > closestOffset) {
+                closestOffset = offset;
+                closestTask = task;
+            }
+        });
+
+        return closestTask;
+    };
+
+    const columns = document.getElementById("lanes").children;
+    for (let columnsKey in columns) {
+        if (!isNaN(parseInt(columnsKey))) {
+            if (columns[columnsKey].classList.contains("swim-lane")) {
+                document.getElementById(columns[columnsKey].id.slice(0, -5) + "-form").addEventListener("submit", handleSubmit);
+            }
+        }
+    }
+
+    function zlicz(element) {
+        const licznik = element.getElementsByClassName("heading")[0].getElementsByClassName("licznik")[0];
+        if (licznik.dataset.max == "None" || licznik.dataset.max == "null") {
+            licznik.innerText = licznik.parentElement.parentElement.children.length - 3;
+        } else {
+            licznik.innerText = licznik.parentElement.parentElement.children.length - 3 + "/" + licznik.dataset.max;
+        }
+    }
+
+    document.querySelectorAll(".licznik").forEach((element) => {
+        if (element.dataset.max == "None") {
+            element.innerText = element.parentElement.parentElement.children.length - 3;
+        } else {
+            element.innerText = element.parentElement.parentElement.children.length - 3 + "/" + element.dataset.max;
+        }
+    })
+
+    function cancelNoteChanges(task) {//nie dziala
+        task.textContent = task.dataset.ogname;
+        giveDefaultButtons(task);
+    }
+
+    function acceptNoteChanges(task, taskValue) {
+        const json = JSON.stringify({id: task.dataset.noteid, name: taskValue});
+        task.textContent = "updating...";
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/notes/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: json
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                task.textContent = data.name;
+                task.dataset.ogname = data.name;
+                giveDefaultButtons(task);
+            })
+            .catch(error => console.error(error));
+    }
+
+    function giveDefaultButtons(note) {
+        const przyciski = document.createElement("div");
+        przyciski.classList.add("przyciski");
+
+        const usuwanie = document.createElement("button");
+        usuwanie.classList.add("usuwanie");
+        usuwanie.onclick = function () {
+            usunTaska(note.id);
+        };
+        usuwanie.textContent = "Usuń";
+        const edytowanie = document.createElement("button");
+        edytowanie.classList.add("edytowanie");
+        edytowanie.onclick = function () {
+            edytujTaska(note.id);
+        };
+        edytowanie.textContent = "Edytuj";
+        przyciski.appendChild(edytowanie);
+        przyciski.appendChild(usuwanie);
+        note.appendChild(przyciski);
+    }
+
+    function edytujTaska(nazwa) { //nie dziala(prawie dziala)
+        const task = document.getElementById(nazwa);
+        const textbox = document.createElement("input");
+        textbox.classList.add("tasktext");
+        textbox.type = "text";
+        var text = '';
+        for (var i = 0; i < task.childNodes.length; ++i)
+            if (task.childNodes[i].nodeType === Node.TEXT_NODE)
+                text += task.childNodes[i].textContent;
+        textbox.value = text.trim(); // Użyj value zamiast textContent
+        task.textContent = task.name;
+        textbox.style = "width: 100%";
+        task.appendChild(textbox);
+
+        const przyciski = document.createElement("div");
+        przyciski.classList.add("przyciski");
+        przyciski.classList.add("egzorcysta");
+
+        const button = document.createElement("button");
+        button.type = "submit";
+        button.name = "edit";
+        button.classList.add('delete');
+        button.innerText = "Anuluj";
+        button.onclick = function () {
+            // Przekazuj wartość textbox.value do funkcji acceptNoteChanges
+            cancelNoteChanges(task);
+        };
+        const cancel = document.createElement("button");
+        cancel.type = "submit";
+        cancel.name = "edit";
+        cancel.classList.add('edit');
+        cancel.classList.add('accept');
+        cancel.innerText = "Akceptuj";
+        cancel.onclick = function () {
+            // Przekazuj wartość textbox.value do funkcji acceptNoteChanges
+            acceptNoteChanges(task, textbox.value);
+        };
+        przyciski.appendChild(cancel);
+        przyciski.appendChild(button);
+        task.appendChild(przyciski);
+    }
+
+    function usunTaska(nazwa) {
+        const task = document.getElementById(nazwa);
+        console.log(task);
+        const id = task.dataset.noteid;
+        const csrftoken = getCookie('csrftoken');
+        fetch("/api/notes/", {
+            method: "Delete",
+            headers: {
+                "Content-Type": "application/json",
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({id: id})
+        });
+        const parent = task.parentElement;
+        task.remove();
+        zlicz(parent);
+    }
+
+    function wyswietlKolumne(kol) {
+
+        const lista = document.getElementById('lanes');
+        const dodaj = document.getElementById('add');
+        const kolumna = document.createElement('div');
+        kolumna.classList.add("swim-lane");
+        kolumna.id = kol.id + "-lane";
+        kolumna.dataset.colid = kol.id;
+        kolumna.dataset.editing = "0";
+        kolumna.dataset.ogname = kol.name;
+        const nazwa = document.createElement('div');
+        nazwa.classList.add("heading");
+        const tekst = document.createElement("div");
+        tekst.classList.add("nazwa");
+        const h4 = document.createElement("h4");
+        h4.innerText = kol.name;
+        tekst.appendChild(h4);
+        nazwa.appendChild(tekst);
+        const licznik = document.createElement("div");
+        licznik.classList.add("licznik");
+        licznik.dataset.max = kol.max;
+        nazwa.appendChild(licznik);
+        const form = document.createElement('form');
+        form.id = kol.id + '-form';
+        form.classList.add('note-form');
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.placeholder = 'Nowe zadanie...';
+        input.id = kol.id + '-input';
+        const submit = document.createElement('button');
+        submit.type = 'submit';
+        submit.innerText = "Dodaj";
+        submit.style = "float: right;";
+        //<button class="usuwanie">🗑</button>
+        form.appendChild(input);
+        form.appendChild(submit);
+        form.addEventListener("submit", handleSubmit);
+        kolumna.appendChild(nazwa);
+        lista.insertBefore(kolumna, dodaj);
+        giveColumnButtons(kolumna);
+        kolumna.appendChild(form);
+        droppableFunc(kolumna);
+        zlicz(kolumna);
+    }
+
+    async function dodajKolumne() {
+        const csrftoken = getCookie('csrftoken');
+        const response = await fetch("/api/columns/", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                'X-CSRFToken': csrftoken
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                wyswietlKolumne(data);
+            });
+    }
+
+    function cancelColumnChanges(columnLane) {//nie dziala
+        const child = columnLane.getElementsByClassName("przyciski")[0]
+        columnLane.removeChild(child);
+        zlicz(columnLane);
+        const nazwaDiv = columnLane.getElementsByClassName("heading")[0].getElementsByClassName("nazwa")[0];
+        nazwaDiv.getElementsByTagName("h4")[0].innerText = columnLane.dataset.ogname;
+        columnLane.dataset.editing = "0";
+    }
+
+    function acceptColumnChanges(column, columnValue, maxValue) {
+        column.dataset.editing = "0";
+        const json = JSON.stringify({id: column.dataset.colid, name: columnValue, max: parseInt(maxValue)});
+        const nazwaDiv = column.getElementsByClassName("heading")[0].getElementsByClassName("nazwa")[0];
+        const child = column.getElementsByClassName("przyciski")[0]
+        console.log(child);
+        column.removeChild(child);
+        nazwaDiv.getElementsByTagName("h4")[0].innerText = "updating...";
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/columns/', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: json
+        })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                nazwaDiv.getElementsByTagName("h4")[0].textContent = data.name;
+                column.dataset.ogname = data.name;
+                column.getElementsByClassName("heading")[0].getElementsByClassName("licznik")[0].dataset.max = data.max;
+                zlicz(column);
+            })
+            .catch(error => console.error(error));
+    }
+
+    function giveColumnButtons(column) {
+        const przyciskiDiv = document.createElement("div");
+        przyciskiDiv.classList.add("przyciski");
+
+        const usuwanie = document.createElement("button");
+        usuwanie.classList.add("delete");
+        usuwanie.onclick = function () {
+            usunKolumne(column.dataset.colid);
+        };
+        usuwanie.textContent = "Usuń";
+        const edytowanie = document.createElement("button");
+        edytowanie.classList.add("edit");
+        edytowanie.onclick = function () {
+            console.log(column.dataset.colid);
+            edytujKolumne(column.dataset.colid);
+        };
+        edytowanie.textContent = "Edytuj";
+        const move_left = document.createElement("button");
+        move_left.classList.add("move-left");
+        move_left.classList.add("paddington");
+        move_left.onclick = function () {
+            moveColumnLeft(column.id);
+        };
+        move_left.textContent = "◀";
+        const move_right = document.createElement("button");
+        move_right.classList.add("move-right");
+        move_right.classList.add("paddington");
+        move_right.onclick = function () {
+            moveColumnRight(column.id);
+        };
+        move_right.textContent = "▶";
+        przyciskiDiv.appendChild(move_left);
+        przyciskiDiv.appendChild(edytowanie);
+        przyciskiDiv.appendChild(usuwanie);
+        przyciskiDiv.appendChild(move_right);
+        column.appendChild(przyciskiDiv);
+
+    }
+
+    function edytujKolumne(nazwa) {
+        console.log(nazwa);
+        const columnLane = document.getElementById(nazwa + "-lane");
+        console.log(columnLane)
+        if (columnLane.dataset.editing === "0") {
+            columnLane.dataset.editing = "1";
+        } else {
+            return
+        }
+        let maxElement = columnLane.querySelector(".licznik");
+        const nameElement = columnLane.querySelector(".nazwa h4");
+
+        const nameInput = document.createElement("input");
+        nameInput.classList.add("nametext");
+        nameInput.type = "text";
+        nameInput.value = nameElement.textContent.trim();
+        nameElement.textContent = '';
+        nameElement.appendChild(nameInput);
+
+        const maxInput = document.createElement("input");
+        let maxValue = ""
+        if(maxElement.dataset.max != "None" && maxElement.dataset.max != "null"){
+            maxValue = maxElement.dataset.max;
+        }
+        maxInput.classList.add("maxtext");
+        maxInput.type = "text";
+        maxInput.value = maxValue;
+        maxElement.textContent = '';
+        maxElement.appendChild(maxInput);
+
+        const submitButton = document.createElement("button");
+        submitButton.type = "submit";
+        submitButton.name = "edit";
+        submitButton.classList.add("edit");
+        submitButton.classList.add("accept");
+        submitButton.innerText = "Akceptuj";
+        submitButton.onclick = function () {
+            acceptColumnChanges(columnLane, nameInput.value, maxInput.value);
+        };
+
+        const cancelButton = document.createElement("button");
+        cancelButton.type = "submit";
+        cancelButton.name = "edit";
+        cancelButton.classList.add("edit");
+        cancelButton.classList.add("delete");
+        cancelButton.innerText = "Anuluj";
+        cancelButton.onclick = function () {
+            cancelColumnChanges(columnLane);
+        };
+
+        const przyciki = document.createElement("div");
+        przyciki.classList.add("przyciski")
+
+        przyciki.appendChild(submitButton);
+        przyciki.appendChild(cancelButton);
+        columnLane.insertBefore(przyciki,columnLane.getElementsByClassName("przyciski")[0]);
+    }
+
+    function usunKolumne(id) {
+        const kolumna = document.getElementById(id + '-lane');
+        const csrftoken = getCookie('csrftoken');
+        fetch("/api/columns/", {
+            method: "Delete",
+            headers: {
+                "Content-Type": "application/json",
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({id: id})
+        }).then((response) => {
+            if (response.status == 204) {
+                kolumna.remove();
+            }
+        });
+    }
+
+
+</script>
+</body>
+</html>
